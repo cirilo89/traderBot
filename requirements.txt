@@ -5,3 +5,4 @@ pandas
 matplotlib
 ccxt
 python-dotenv
+gunicorn
