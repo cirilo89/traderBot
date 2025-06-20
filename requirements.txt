@@ -1,0 +1,7 @@
+flask
+flask-login
+bcrypt
+pandas
+matplotlib
+ccxt
+python-dotenv

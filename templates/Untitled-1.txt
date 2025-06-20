@@ -1,0 +1,2 @@
+python -c "import bcrypt, getpass; pwd = getpass.getpass('123Qweasdzxc+').encode(); print(bcrypt.hashpw(pwd, bcrypt.gensalt()).decode())"
+$2b$12$pJdEERmsCZxLu3RT9ygTmuOCEbAnpOs0BR3j7j4HujausiFfhJwHC

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="container py-4">
+  <h3>Estado de la cartera</h3>
+  <div id="balanceInfo" class="mb-2">
+  <!-- aquí insertaremos saldo vía JS -->
+</div>
+  <table id="tblState" class="table table-sm table-striped w-100">
+    <thead><tr>
+      <th>Par</th><th>Posición</th><th>Cantidad</th><th>Entrada</th><th>P/L sin cerrar</th>
+    </tr></thead>
+  </table>
+
+  <h3 class="mt-4">Historial de operaciones</h3>
+  <table id="tblHist" class="table table-sm table-bordered w-100">
+    <thead><tr>
+      <th>Fecha</th><th>Par</th><th>Tipo</th><th>Precio</th>
+    </tr></thead>
+  </table>
+
+  <h3 class="mt-4">Logs de evaluaciones
+      <button id="btnClear" class="btn btn-sm btn-danger">
+    Vaciar logs
+  </button>
+  </h3>
+  
+  <table id="tblLogs" class="table table-sm table-bordered w-100">
+    <thead><tr>
+      <th>Fecha</th><th>Par</th><th>Close</th><th>RSI</th><th>SMA</th><th>Decisión</th><th>Motivo</th>
+    </tr></thead>
+  </table>
+</div>
+
+<script>
+function loadTables(){
+
+      // ---- Balance EUR + beneficio ----
+  fetch('/api/balance')
+    .then(r => r.json())
+    .then(bal => {
+      const eur = bal.free.toFixed(2);
+      const ben = bal.benefit.toFixed(2);
+      document.getElementById('balanceInfo').innerHTML =
+        `<strong>Saldo libre:</strong> € ${eur} &nbsp; | &nbsp; ` +
+        `<strong>Beneficio total:</strong> € ${ben}`;
+    });
+
+  // ---- Estado por par ----
+  fetch('/api/state').then(r=>r.json()).then(data=>{
+    const rows = Object.entries(data).map(([p,s])=>[
+      p, s.position ? 'Abierta' : '—',
+      s.amount.toFixed(6),
+      s.entry.toFixed(2),
+      s.unreal.toFixed(2)
+    ]);
+    $('#tblState').DataTable({data:rows, destroy:true,
+                              searching:false, paging:false});
+  });
+  // Estado
+  fetch('/api/state').then(r=>r.json()).then(data=>{
+    const rows = Object.entries(data).map(([p,s])=>[
+      p, s.position ? 'Abierta' : '—',
+      s.amount.toFixed(6),
+      s.entry.toFixed(2),
+      s.unreal.toFixed(2)
+    ]);
+    $('#tblState').DataTable({data:rows, destroy:true, searching:false, paging:false});
+  });
+
+  // Historial
+  fetch('/api/history').then(r=>r.json()).then(data=>{
+    const rows = data.map(x=>[x.datetime, x.pair, x.tipo, (+x.precio).toFixed(2)]);
+    $('#tblHist').DataTable({data:rows, destroy:true, pageLength:10});
+  });
+
+  // Logs
+  fetch('/api/logs').then(r=>r.json()).then(data=>{
+    const rows = data.map(x=>[
+      x.datetime, x.pair,
+      (+x.Close).toFixed(2), x.RSI, x.SMA, x.decision, x.motivo
+    ]);
+    $('#tblLogs').DataTable({data:rows, destroy:true, pageLength:25});
+  });
+}
+loadTables();
+document.getElementById('btnClear').addEventListener('click', () => {
+  if (!confirm('¿Seguro que quieres borrar todos los logs?')) return;
+
+  fetch('/api/clear_logs', { method: 'POST' })
+    .then(r => r.json())
+    .then(j => {
+      if (j.ok) {
+        alert('Logs vaciados');
+        loadTables();            // recarga tablas para reflejar cambio
+      } else {
+        alert('No se pudieron borrar');
+      }
+    })
+    .catch(err => alert(err));
+});
+
+setInterval(loadTables, 60000); // refresca cada minuto
+</script>
+{% endblock %}
