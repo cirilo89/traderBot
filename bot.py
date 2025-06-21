@@ -115,14 +115,14 @@ def friendly_eval(rsi, sma, price, pos_open):
 
 # ─────────────────── EJECUCIÓN DE TRADE ─────────────────── #
 def execute(pair, decision, price, rsi, sma, motivo):
-    """Actualiza estado y CSVs.  Se llama desde trading_loop."""
+    """Actualiza estado y CSVs. Se llama desde trading_loop."""
     global capital_free, benefit_total
     st = state[pair]
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     # --- comprar ---
     if decision == "buy" and not st["position"] and capital_free > 0:
-        eur_to_use = capital_free * 0.999  # Usa casi todo el saldo disponible para evitar errores por fee
+        eur_to_use = capital_free * 0.999  # Usa casi todo el saldo disponible
         if eur_to_use < 1e-6:
             return
         try:
@@ -131,51 +131,49 @@ def execute(pair, decision, price, rsi, sma, motivo):
                     pair, "market", "buy", None, None,
                     {"quoteOrderQty": eur_to_use}
                 )
-                st["amount"] = order["filled"] or order["amount"]  # La cantidad real comprada
-                st["locked"] = order["cost"]  # Lo que realmente se gastó
+                st["amount"] = order["filled"] or order["amount"]
+                st["locked"] = order["cost"]
             else:
                 st["amount"] = eur_to_use / price
                 st["locked"] = eur_to_use
             capital_free -= st["locked"]
             st.update(position=True, entry=price)
+            # Solo registrar compra si fue exitosa
+            append_csv(TRADES_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", "buy"])
         except Exception as e:
             print("Buy error", pair, e)
             return
 
-        append_csv(TRADES_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", "buy"])
-
     # --- vender / cerrar ---
-    elif decision == "sell" and st["position"]:
+    elif decision == "sell":
         try:
             if not USE_TESTNET:
-                # Obtener balance real de ADA antes de vender
                 base_coin = pair.split("/")[0]
                 balance_real = binance.fetch_balance()["free"].get(base_coin, 0)
-                amount_to_sell = min(st["amount"], balance_real)
-                if amount_to_sell < 1e-6:
+                if balance_real < 1e-6:
                     print(f"No hay saldo suficiente real de {base_coin} para vender.")
                     return
-                order = binance.create_order(pair, "market", "sell", amount_to_sell)
+                order = binance.create_order(pair, "market", "sell", balance_real)
                 proceeds = order["cost"]  # Lo recibido en EUR
             else:
-                proceeds = st["amount"] * price
-            profit = proceeds - st["locked"]
+                proceeds = st["amount"] * price if st["amount"] else 0
+            profit = proceeds - st["locked"] if st["locked"] else 0
             capital_free += proceeds
             benefit_total += profit
+            st.update(position=False, amount=0.0, entry=0.0, locked=0.0, unreal=0.0)
+            # Solo registrar venta si fue exitosa
+            append_csv(TRADES_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", "sell"])
         except Exception as e:
             print("Sell error", pair, e)
             return
-
-    st.update(position=False, amount=0.0, entry=0.0, locked=0.0, unreal=0.0)
-    append_csv(TRADES_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", "sell"])
-
 
     # P/L no realizado
     if st["position"]:
         st["unreal"] = (price - st["entry"]) * st["amount"]
 
-    # Siempre registramos la evaluación
+    # Siempre registrar la evaluación (opcional, según tu lógica)
     append_csv(LOG_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", decision, motivo])
+
     
 
 # ─────────────────── CALLBACK WEB ─────────────────── #
