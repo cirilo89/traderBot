@@ -201,4 +201,4 @@ def _worker():
             print("Loop error:", exc)
         time.sleep(60)
 
-threading.Thread(target=_worker, daemon=True).start()
+#threading.Thread(target=_worker, daemon=True).start()
