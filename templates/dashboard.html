@@ -69,7 +69,13 @@ function loadTables(){
 
   // Historial
   fetch('/api/history').then(r=>r.json()).then(data=>{
-    const rows = data.map(x=>[x.datetime, x.pair, x.tipo, (+x.precio).toFixed(2)]);
+   const rows = data.map(x=>[
+    x.datetime,
+    x.pair,
+    x.decision,                // era x.tipo
+    (+x.Close).toFixed(2)      // era x.precio
+]);
+
     $('#tblHist').DataTable({data:rows, destroy:true, pageLength:10});
   });
 
