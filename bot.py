@@ -148,8 +148,15 @@ def execute(pair, decision, price, rsi, sma, motivo):
     elif decision == "sell" and st["position"]:
         try:
             if not USE_TESTNET:
-                order = binance.create_order(pair, "market", "sell", st["amount"])
-                proceeds = order["cost"]
+                # Obtener balance real de ADA antes de vender
+                base_coin = pair.split("/")[0]
+                balance_real = binance.fetch_balance()["free"].get(base_coin, 0)
+                amount_to_sell = min(st["amount"], balance_real)
+                if amount_to_sell < 1e-6:
+                    print(f"No hay saldo suficiente real de {base_coin} para vender.")
+                    return
+                order = binance.create_order(pair, "market", "sell", amount_to_sell)
+                proceeds = order["cost"]  # Lo recibido en EUR
             else:
                 proceeds = st["amount"] * price
             profit = proceeds - st["locked"]
@@ -159,8 +166,9 @@ def execute(pair, decision, price, rsi, sma, motivo):
             print("Sell error", pair, e)
             return
 
-        st.update(position=False, amount=0.0, entry=0.0, locked=0.0, unreal=0.0)
-        append_csv(TRADES_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", "sell"])
+    st.update(position=False, amount=0.0, entry=0.0, locked=0.0, unreal=0.0)
+    append_csv(TRADES_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", "sell"])
+
 
     # P/L no realizado
     if st["position"]:
