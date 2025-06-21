@@ -111,6 +111,15 @@ def api_clear_logs():
 
     return jsonify({"ok": True})
 
+@app.route("/api/clear_history", methods=["POST"])
+@login_required
+def api_clear_history():
+    path = "historial_trades.csv"
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        import csv
+        csv.writer(f).writerow(bot.HEAD_TRADE)  # usa el encabezado del bot
+    # Opcional: limpiar estructura en memoria, si la usas
+    return jsonify({"ok": True})
 
 # ---------- Callback del bot ----------
 def notify_clients():
