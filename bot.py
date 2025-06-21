@@ -23,6 +23,7 @@ TRADE_FRACTION  = float(os.getenv("TRADE_FRACTION", 1 / max(len(TICKERS), 1)))
 
 LOG_CSV   = "log_evaluaciones.csv"
 TRADES_CSV= "historial_trades.csv"
+STOP_LOSS_PCT = 0.02  # 2%
 
 # ───────────────────── CONEXIÓN BINANCE ─────────────────── #
 binance = ccxt.binance({
@@ -83,13 +84,14 @@ def fetch_df(pair):
     return df
 
 # ─────────────────── ESTRATEGIA + MOTIVO ────────────────── #
-def friendly_eval(rsi, sma, price, pos_open):
+def friendly_eval(rsi, sma, price, pos_open, entry=0.0):
     ok = lambda c: "✅" if c else "❌"
     f2 = lambda x: f"{x:,.2f}".replace(",", " ")
 
     rsi_lt30, rsi_gt70 = rsi < 30, rsi > 70
     p_gt_sma, p_lt_sma = price > sma, price < sma
 
+    # Para compra
     if not pos_open:
         if rsi_lt30 and p_gt_sma:
             mot = (f"{ok(rsi_lt30)} RSI {f2(rsi)}<30 • "
@@ -103,15 +105,22 @@ def friendly_eval(rsi, sma, price, pos_open):
                f"{ok(p_gt_sma)} Precio {f2(price)}>SMA {f2(sma)} • {ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} → Esperar")
         return "hold", mot
 
-    # posición abierta (long)
-    exit_cond = rsi_gt70 or p_lt_sma
+    # Posición abierta (long)
+    # ------ STOP LOSS ------
+    stop_loss = entry > 0 and price <= entry * (1 - STOP_LOSS_PCT)
+    exit_cond = rsi_gt70 or p_lt_sma or stop_loss
+
     if exit_cond:
-        mot = (f"{ok(rsi_gt70)} RSI {f2(rsi)}>70 o "
-               f"{ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} → Cerrar")
+        mot = (
+            (f"{ok(rsi_gt70)} RSI {f2(rsi)}>70 o " if rsi_gt70 else "") +
+            (f"{ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} o " if p_lt_sma else "") +
+            (f"{ok(stop_loss)} Stop Loss ({f2(price)} ≤ {f2(entry*(1-STOP_LOSS_PCT))}) → Cerrar" if stop_loss else "")
+        )
         return "sell", mot
     mot = (f"{ok(rsi_gt70)} RSI {f2(rsi)}>70 y "
            f"{ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} → Mantener")
     return "hold", mot
+
 
 # ─────────────────── EJECUCIÓN DE TRADE ─────────────────── #
 def execute(pair, decision, price, rsi, sma, motivo):
@@ -202,7 +211,8 @@ def _worker():
                 df = fetch_df(pair)
                 rsi, sma  = df["RSI"].iloc[-1], df["SMA"].iloc[-1]
                 price     = df["close"].iloc[-1]
-                dec, mot  = friendly_eval(rsi, sma, price, state[pair]["position"])
+                dec, mot  = dec, mot = friendly_eval(rsi, sma, price, state[pair]["position"],state[pair].get("entry", 0.0))
+
                 execute(pair, dec, price, rsi, sma, mot)
             _gui_callback()          # notifica al front-end
         except Exception as exc:
