@@ -1,6 +1,8 @@
-import os, csv, bcrypt, time                 # ← añadido time
+import os, csv, bcrypt
 from flask import Flask, render_template, redirect, request, url_for, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 import bot
 from dotenv import load_dotenv
 load_dotenv()
@@ -91,10 +93,34 @@ def api_logs():
 @app.route("/api/history")
 @login_required
 def api_history():
-    return jsonify(tail_csv("historial_trades.csv", n=500))
+    # Función helper que atrapa errores para cada par
+    def fetch_trades(pair):
+        try:
+            # ccxt: fetch_my_trades devuelve la lista de trades ejecutados
+            return bot.binance.fetch_my_trades(pair)
+        except Exception as e:
+            app.logger.error(f"Error fetching trades for {pair}: {e}")
+            return []
 
-    
-# --- vaciar log_evaluaciones.csv ----------------------------------
+    # Lanza una petición por cada ticker en paralelo
+    with ThreadPoolExecutor(max_workers=len(bot.TICKERS)) as executor:
+        all_results = executor.map(fetch_trades, bot.TICKERS)
+
+    # Aplana la lista y formatea cada trade
+    trades = []
+    for trades_list in all_results:
+        for t in trades_list:
+            trades.append({
+                "datetime": datetime.fromtimestamp(t['timestamp'] / 1000).isoformat(),
+                "pair":     t['symbol'],
+                "price":    float(t['price']),
+                "amount":   float(t['amount']),
+                "side":     t['side']
+            })
+
+    # Ordena por fecha descendente y limita (p.ej.) a los últimos 500
+    trades.sort(key=lambda x: x['datetime'], reverse=True)
+    return jsonify(trades[:500])
 @app.route("/api/clear_logs", methods=["POST"])
 @login_required
 def api_clear_logs():

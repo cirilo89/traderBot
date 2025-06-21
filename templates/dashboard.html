@@ -8,7 +8,10 @@
 <div class="responsive-table">
   <table id="tblState" class="table table-sm table-striped w-100">
     <thead><tr>
-      <th>Par</th><th>Posición</th><th>Cantidad</th><th>Entrada</th><th>P/L sin cerrar</th>
+      <th>Fecha/Hora</th>
+      <th>Pareja</th>
+      <th>Operación</th>
+      <th>Precio</th>
     </tr></thead>
   </table>
 </div>
@@ -76,17 +79,19 @@ function loadTables(){
     $('#tblState').DataTable({data:rows, destroy:true, searching:false, paging:false});
   });
 
-  // Historial
-  fetch('/api/history').then(r=>r.json()).then(data=>{
-   const rows = data.map(x=>[
+
+// Historial
+fetch('/api/history').then(r=>r.json()).then(data=>{
+  const rows = data.map(x=>[
     x.datetime,
     x.pair,
-    x.decision,                // era x.tipo
-    (+x.Close).toFixed(2)      // era x.precio
-]);
+    x.side,                   // ahora usamos la propiedad 'side' (buy/sell)
+    (+x.price).toFixed(2)     // y 'price' en lugar de 'Close'
+  ]);
 
-    $('#tblHist').DataTable({data:rows, destroy:true, pageLength:10});
-  });
+  $('#tblHist').DataTable({data:rows, destroy:true, pageLength:10});
+});
+
 
   // Logs
   fetch('/api/logs').then(r=>r.json()).then(data=>{
