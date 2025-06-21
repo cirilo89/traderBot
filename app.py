@@ -63,7 +63,19 @@ def dashboard():
 @app.route("/api/state")
 @login_required
 def api_state():
-    return jsonify(bot.state)
+    balances = bot.binance.fetch_balance()["free"]  # obten saldos reales
+    state_real = {}
+    for pair in bot.TICKERS:
+        base, quote = pair.split("/")
+        state_real[pair] = {
+            "position": balances.get(base, 0) > 0,
+            "amount": balances.get(base, 0),
+            "entry": bot.state[pair].get("entry", 0.0),   # puedes dejarlo como está, o poner 0
+            "locked": 0.0,
+            "unreal": 0.0
+        }
+    return jsonify(state_real)
+
 
 def tail_csv(path, n=1000):
     import collections
