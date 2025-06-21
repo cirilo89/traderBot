@@ -154,18 +154,28 @@ def execute(pair, decision, price, rsi, sma, motivo):
                     print(f"No hay saldo suficiente real de {base_coin} para vender.")
                     return
                 order = binance.create_order(pair, "market", "sell", balance_real)
-                proceeds = order["cost"]  # Lo recibido en EUR
+                # Verifica que la orden se ejecutó realmente:
+                if (
+                    order is None or 
+                    (order.get("status") not in ("closed", "filled")) or 
+                    (float(order.get("filled", 0)) < 1e-8)
+                ):
+                    print(f"Venta de {base_coin} no ejecutada o rechazada: {order}")
+                    return
+                proceeds = order.get("cost", 0)
             else:
                 proceeds = st["amount"] * price if st["amount"] else 0
+
             profit = proceeds - st["locked"] if st["locked"] else 0
             capital_free += proceeds
             benefit_total += profit
             st.update(position=False, amount=0.0, entry=0.0, locked=0.0, unreal=0.0)
-            # Solo registrar venta si fue exitosa
+            # Solo registrar venta si fue ejecutada de verdad
             append_csv(TRADES_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", "sell"])
         except Exception as e:
             print("Sell error", pair, e)
             return
+
 
     # P/L no realizado
     if st["position"]:
