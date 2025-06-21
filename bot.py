@@ -122,7 +122,7 @@ def execute(pair, decision, price, rsi, sma, motivo):
 
     # --- comprar ---
     if decision == "buy" and not st["position"] and capital_free > 0:
-        eur_to_use = capital_free * TRADE_FRACTION
+        eur_to_use = capital_free * 0.999  # Usa casi todo el saldo disponible para evitar errores por fee
         if eur_to_use < 1e-6:
             return
         try:
@@ -131,8 +131,8 @@ def execute(pair, decision, price, rsi, sma, motivo):
                     pair, "market", "buy", None, None,
                     {"quoteOrderQty": eur_to_use}
                 )
-                st["amount"] = order["filled"] or order["amount"]
-                st["locked"] = order["cost"]
+                st["amount"] = order["filled"] or order["amount"]  # La cantidad real comprada
+                st["locked"] = order["cost"]  # Lo que realmente se gastó
             else:
                 st["amount"] = eur_to_use / price
                 st["locked"] = eur_to_use

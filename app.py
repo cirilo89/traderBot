@@ -65,19 +65,22 @@ def dashboard():
 def api_state():
     return jsonify(bot.state)
 
+def tail_csv(path, n=1000):
+    import collections
+    with open(path, encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        return list(collections.deque(reader, maxlen=n))
+
 @app.route("/api/logs")
 @login_required
 def api_logs():
-    with open("log_evaluaciones.csv", encoding="utf-8") as f:   # ← añadido encoding
-        reader = csv.DictReader(f)
-        return jsonify(list(reader)[-1000:])
+    return jsonify(tail_csv("log_evaluaciones.csv", n=1000))
 
 @app.route("/api/history")
 @login_required
 def api_history():
-    with open("historial_trades.csv", encoding="utf-8") as f:   # idem
-        reader = csv.DictReader(f)
-        return jsonify(list(reader)[-500:])
+    return jsonify(tail_csv("historial_trades.csv", n=500))
+
     
 # --- vaciar log_evaluaciones.csv ----------------------------------
 @app.route("/api/clear_logs", methods=["POST"])
