@@ -16,10 +16,17 @@ Pequeño bot de trading con interfaz web basada en Flask. Registra las evaluacio
    TICKERS=BTC/EUR,ETH/EUR,ADA/EUR
    RSI_PERIOD=14
    SMA_PERIOD=20
+   TRADE_FRACTION=0.33
+   RSI_LOW=30
+   RSI_HIGH=70
+   TAKE_PROFIT_PCT=0.02
    FLASK_SECRET=una-clave-secreta
    WEB_USER=admin
    WEB_PASS_HASH=<hash bcrypt de la contraseña>
    ```
+   - `TRADE_FRACTION` indica la fracción del capital libre que se usará en cada operación.
+   - `RSI_LOW` y `RSI_HIGH` permiten ajustar los umbrales de sobreventa y sobrecompra.
+   - `TAKE_PROFIT_PCT` define un objetivo de beneficio (por ejemplo `0.02` equivale a un 2 %).
 2. Instala las dependencias:
    ```bash
    pip install -r requirements.txt
