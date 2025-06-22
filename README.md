@@ -1,6 +1,6 @@
 # traderBot
 
-Pequeño bot de trading con interfaz web basada en Flask. Registra las evaluaciones de la estrategia en un CSV y permite consultar el estado de la cuenta y el historial de operaciones.
+Pequeño bot de trading con interfaz web basada en Flask. Registra las evaluaciones de la estrategia en una base de datos SQLite (`logs.db`) y permite consultar el estado de la cuenta y el historial de operaciones.
 
 ## Requisitos
 - Python 3.11+

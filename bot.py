@@ -1,6 +1,6 @@
 
-# bot.py — motor de trading multi-par con logs de decisiones en CSV (sin historial CSV)
-import os, csv, threading, time
+# bot.py — motor de trading multi-par con logs de decisiones en SQLite
+import os, sqlite3, threading, time
 from datetime import datetime
 
 import ccxt
@@ -21,22 +21,32 @@ SMA_PERIOD    = int(os.getenv("SMA_PERIOD", 20))
 TRADE_FRACTION= float(os.getenv("TRADE_FRACTION", 1 / max(len(TICKERS), 1)))
 STOP_LOSS_PCT = 0.02  # 2%
 
-# ───────────────────── CSV HELPERS ─────────────────────── #
-LOG_CSV = "log_evaluaciones.csv"
-HEAD_LOG = ["datetime", "pair", "Close", "RSI", "SMA", "decision", "motivo"]
 
-def ensure_csv(path, header):
-    if not os.path.isfile(path) or os.path.getsize(path) == 0:
-        with open(path, "w", newline='', encoding="utf-8") as f:
-            csv.writer(f).writerow(header)
 
-def append_csv(path, row):
-    with open(path, "a", newline='', encoding="utf-8") as f:
-        csv.writer(f).writerow(row)
+# ────────────── DB HELPERS ──────────────
+LOG_DB = "logs.db"
 
-# Aseguramos cabecera del log
-ensure_csv(LOG_CSV, HEAD_LOG)
+def ensure_db():
+    conn = sqlite3.connect(LOG_DB)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS log_evaluaciones ("
+        "datetime TEXT, pair TEXT, close REAL, rsi REAL, sma REAL, "
+        "decision TEXT, motivo TEXT)"
+    )
+    conn.commit()
+    conn.close()
 
+def insert_log(dt, pair, close, rsi, sma, decision, motivo):
+    conn = sqlite3.connect(LOG_DB)
+    conn.execute(
+        "INSERT INTO log_evaluaciones (datetime, pair, close, rsi, sma, decision, motivo) VALUES (?,?,?,?,?,?,?)",
+        (dt, pair, close, rsi, sma, decision, motivo)
+    )
+    conn.commit()
+    conn.close()
+
+# Aseguramos base de datos de logs
+ensure_db()
 # ───────────────────── CONEXIÓN BINANCE ─────────────────── #
 binance = ccxt.binance({
     "apiKey": API_KEY,
@@ -144,8 +154,8 @@ def execute(pair, decision, price, rsi, sma, motivo):
             return
     if st.get("position"):
         st["unreal"] = (price - st["entry"]) * st["amount"]
-    # Registrar evaluación en CSV
-    append_csv(LOG_CSV, [now, pair, f"{price:.8f}", f"{rsi:.2f}", f"{sma:.2f}", decision, motivo])
+    # Registrar evaluación en base de datos
+    insert_log(now, pair, float(price), float(rsi), float(sma), decision, motivo)
 
 # ─────────────────── CALLBACK WEB + LOOP ─────────────────── #
 _gui_callback = lambda: None
