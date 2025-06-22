@@ -115,8 +115,13 @@ def api_history():
 
     # Aplana la lista y formatea cada trade
     trades = []
+    seen = set()  # evita duplicados si el exchange devuelve el mismo trade
     for trades_list in all_results:
         for t in trades_list:
+            uid = f"{t.get('id')}-{t['symbol']}"
+            if uid in seen:
+                continue
+            seen.add(uid)
             trades.append({
                 "datetime": datetime.fromtimestamp(t['timestamp'] / 1000).isoformat(),
                 "pair":     t['symbol'],
