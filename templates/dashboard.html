@@ -97,9 +97,9 @@ fetch('/api/history').then(r=>r.json()).then(data=>{
     const rows = data.map(x=>[
       x.datetime,
       x.pair,
-      (+x.Close).toFixed(2),
-      x.RSI,
-      x.SMA,
+      (+x.close).toFixed(2),
+      x.rsi,
+      x.sma,
       x.decision,
       x.motivo
     ]);
