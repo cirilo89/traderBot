@@ -1,4 +1,4 @@
-import os, csv, bcrypt
+import os, csv, sqlite3, bcrypt
 from flask import Flask, render_template, redirect, request, url_for, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user
 from concurrent.futures import ThreadPoolExecutor
@@ -82,16 +82,20 @@ def api_state():
     return jsonify(state_real)
 
 
-def tail_csv(path, n=1000):
-    import collections
-    with open(path, encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        return list(collections.deque(reader, maxlen=n))
+def tail_db(n=1000):
+    conn = sqlite3.connect(bot.LOG_DB)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT * FROM log_evaluaciones ORDER BY rowid DESC LIMIT ?",
+        (n,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in reversed(rows)]
 
 @app.route("/api/logs")
 @login_required
 def api_logs():
-    return jsonify(tail_csv("log_evaluaciones.csv", n=1000))
+    return jsonify(tail_db(n=1000))
 
 @app.route("/api/history")
 @login_required
@@ -127,14 +131,11 @@ def api_history():
 @app.route("/api/clear_logs", methods=["POST"])
 @login_required
 def api_clear_logs():
-    path = "log_evaluaciones.csv"
+    conn = sqlite3.connect(bot.LOG_DB)
+    conn.execute("DELETE FROM log_evaluaciones")
+    conn.commit()
+    conn.close()
 
-    # Sobrescribe el fichero con solo la cabecera
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        import csv
-        csv.writer(f).writerow(bot.HEAD_LOG)          # usa encabezado del bot
-
-    # Limpia también el registro en memoria (opcional)
     if hasattr(bot, "log_records"):
         bot.log_records.clear()
 
