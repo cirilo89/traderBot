@@ -17,11 +17,7 @@
     </table>
 </div>
 
-  <h3 class="mt-4">Historial de operaciones
-     <button id="btnClearHistory" class="btn btn-sm btn-danger">
-    Vaciar historial
-  </button>
-  </h3>
+  <h3 class="mt-4">Historial de operaciones</h3>
   <div class="responsive-table">
     <table id="tblHist" class="table table-sm table-bordered w-100">
       <thead><tr>
@@ -30,11 +26,7 @@
     </table>
   </div>
 
-  <h3 class="mt-4">Logs de evaluaciones
-      <button id="btnClear" class="btn btn-sm btn-danger">
-    Vaciar logs
-  </button>
-  </h3>
+  <h3 class="mt-4">Logs de evaluaciones</h3>
   <div class="responsive-table">
     <table id="tblLogs" class="table table-sm table-bordered w-100">
       <thead><tr>
@@ -106,39 +98,7 @@ fetch('/api/history').then(r=>r.json()).then(data=>{
     updateTable('#tblLogs', rows, {pageLength:25});
   });
 }
-loadTables();
-document.getElementById('btnClear').addEventListener('click', () => {
-  if (!confirm('¿Seguro que quieres borrar todos los logs?')) return;
-
-  fetch('/api/clear_logs', { method: 'POST' })
-    .then(r => r.json())
-    .then(j => {
-      if (j.ok) {
-        alert('Logs vaciados');
-        loadTables();            // recarga tablas para reflejar cambio
-      } else {
-        alert('No se pudieron borrar');
-      }
-    })
-    .catch(err => alert(err));
-});
-document.getElementById('btnClearHistory').addEventListener('click', () => {
-  if (!confirm('¿Seguro que quieres borrar todo el historial de operaciones?')) return;
-
-  fetch('/api/clear_history', { method: 'POST' })
-    .then(r => r.json())
-    .then(j => {
-      if (j.ok) {
-        alert('Historial vaciado');
-        loadTables();            // recarga tablas para reflejar cambio
-      } else {
-        alert('No se pudo borrar el historial');
-      }
-    })
-    .catch(err => alert(err));
-});
-
-
+  loadTables();
 setInterval(loadTables, 60000); // refresca cada minuto
 </script>
 {% endblock %}
