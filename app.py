@@ -17,8 +17,6 @@ app.secret_key = os.getenv("FLASK_SECRET", "change-me")
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-# Cabecera usada si se desea limpiar historial_trades.csv
-HEAD_TRADE = ["datetime", "pair", "Close", "RSI", "SMA", "decision"]
 
 class User(UserMixin):
     id = 1  # single-user
@@ -124,31 +122,6 @@ def api_history():
     # Ordena por fecha descendente y limita (p.ej.) a los últimos 500
     trades.sort(key=lambda x: x['datetime'], reverse=True)
     return jsonify(trades[:500])
-@app.route("/api/clear_logs", methods=["POST"])
-@login_required
-def api_clear_logs():
-    path = "log_evaluaciones.csv"
-
-    # Sobrescribe el fichero con solo la cabecera
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        import csv
-        csv.writer(f).writerow(bot.HEAD_LOG)          # usa encabezado del bot
-
-    # Limpia también el registro en memoria (opcional)
-    if hasattr(bot, "log_records"):
-        bot.log_records.clear()
-
-    return jsonify({"ok": True})
-
-@app.route("/api/clear_history", methods=["POST"])
-@login_required
-def api_clear_history():
-    path = "historial_trades.csv"
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        import csv
-        csv.writer(f).writerow(HEAD_TRADE)
-    # Opcional: limpiar estructura en memoria, si la usas
-    return jsonify({"ok": True})
 
 # ---------- Callback del bot ----------
 def notify_clients():
