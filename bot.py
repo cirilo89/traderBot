@@ -19,6 +19,9 @@ INTERVAL      = os.getenv("INTERVAL", "1m")
 RSI_PERIOD    = int(os.getenv("RSI_PERIOD", 14))
 SMA_PERIOD    = int(os.getenv("SMA_PERIOD", 20))
 TRADE_FRACTION= float(os.getenv("TRADE_FRACTION", 1 / max(len(TICKERS), 1)))
+RSI_LOW       = float(os.getenv("RSI_LOW", 30))
+RSI_HIGH      = float(os.getenv("RSI_HIGH", 70))
+TAKE_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", 0.02))
 STOP_LOSS_PCT = 0.02  # 2%
 
 
@@ -89,26 +92,25 @@ def fetch_df(pair):
 def friendly_eval(rsi, sma, price, pos_open, entry=0.0):
     ok = lambda c: "✅" if c else "❌"
     f2 = lambda x: f"{x:,.2f}".replace(",", " ")
-    rsi_lt30, rsi_gt70 = rsi < 30, rsi > 70
+    rsi_lt, rsi_gt = rsi < RSI_LOW, rsi > RSI_HIGH
     p_gt_sma, p_lt_sma = price > sma, price < sma
     if not pos_open:
-        if rsi_lt30 and p_gt_sma:
-            mot = (f"{ok(rsi_lt30)} RSI {f2(rsi)}<30 • {ok(p_gt_sma)} Precio {f2(price)}>SMA {f2(sma)} → Comprar")
+        if rsi_lt and p_gt_sma:
+            mot = (f"{ok(rsi_lt)} RSI {f2(rsi)}<{RSI_LOW} • {ok(p_gt_sma)} Precio {f2(price)}>SMA {f2(sma)} → Comprar")
             return "buy", mot
-        if rsi_gt70 and p_lt_sma:
-            mot = (f"{ok(rsi_gt70)} RSI {f2(rsi)}>70 • {ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} → Vender")
-            return "sell", mot
-        mot = (f"{ok(rsi_lt30)} RSI {f2(rsi)}<30 • {ok(rsi_gt70)} RSI {f2(rsi)}>70 • "
+        mot = (f"{ok(rsi_lt)} RSI {f2(rsi)}<{RSI_LOW} • {ok(rsi_gt)} RSI {f2(rsi)}>{RSI_HIGH} • "
                f"{ok(p_gt_sma)} Precio {f2(price)}>SMA {f2(sma)} • {ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} → Esperar")
         return "hold", mot
     stop_loss = entry > 0 and price <= entry * (1 - STOP_LOSS_PCT)
-    exit_cond = rsi_gt70 or p_lt_sma or stop_loss
+    take_profit = entry > 0 and price >= entry * (1 + TAKE_PROFIT_PCT)
+    exit_cond = rsi_gt or p_lt_sma or stop_loss or take_profit
     if exit_cond:
-        mot = ((f"{ok(rsi_gt70)} RSI {f2(rsi)}>70 o " if rsi_gt70 else "") +
+        mot = ((f"{ok(rsi_gt)} RSI {f2(rsi)}>{RSI_HIGH} o " if rsi_gt else "") +
                (f"{ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} o " if p_lt_sma else "") +
-               (f"{ok(stop_loss)} Stop Loss ({f2(price)} ≤ {f2(entry*(1-STOP_LOSS_PCT))}) → Cerrar" if stop_loss else ""))
+               (f"{ok(stop_loss)} Stop Loss ({f2(price)} ≤ {f2(entry*(1-STOP_LOSS_PCT))}) o " if stop_loss else "") +
+               (f"{ok(take_profit)} Take Profit ({f2(price)} ≥ {f2(entry*(1+TAKE_PROFIT_PCT))}) → Cerrar" if take_profit else ""))
         return "sell", mot
-    mot = (f"{ok(rsi_gt70)} RSI {f2(rsi)}>70 y {ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} → Mantener")
+    mot = (f"{ok(rsi_gt)} RSI {f2(rsi)}>{RSI_HIGH} y {ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} → Mantener")
     return "hold", mot
 
 # ─────────────────── EJECUCIÓN DE TRADE ─────────────────── #
@@ -118,7 +120,7 @@ def execute(pair, decision, price, rsi, sma, motivo):
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # --- comprar ---
     if decision == "buy" and not st["position"] and capital_free > 0:
-        eur_to_use = capital_free * 0.999
+        eur_to_use = capital_free * TRADE_FRACTION * 0.999
         if eur_to_use < 1e-6: return
         try:
             if not USE_TESTNET:
