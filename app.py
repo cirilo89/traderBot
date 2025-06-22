@@ -17,6 +17,9 @@ app.secret_key = os.getenv("FLASK_SECRET", "change-me")
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
+# Cabecera usada si se desea limpiar historial_trades.csv
+HEAD_TRADE = ["datetime", "pair", "Close", "RSI", "SMA", "decision"]
+
 class User(UserMixin):
     id = 1  # single-user
 
@@ -143,7 +146,7 @@ def api_clear_history():
     path = "historial_trades.csv"
     with open(path, "w", newline="", encoding="utf-8") as f:
         import csv
-        csv.writer(f).writerow(bot.HEAD_TRADE)  # usa el encabezado del bot
+        csv.writer(f).writerow(HEAD_TRADE)
     # Opcional: limpiar estructura en memoria, si la usas
     return jsonify({"ok": True})
 
