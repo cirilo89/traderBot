@@ -6,14 +6,15 @@
   <!-- aquí insertaremos saldo vía JS -->
 </div>
 <div class="responsive-table">
-  <table id="tblState" class="table table-sm table-striped w-100">
-    <thead><tr>
-      <th>Fecha/Hora</th>
-      <th>Pareja</th>
-      <th>Operación</th>
-      <th>Precio</th>
-    </tr></thead>
-  </table>
+    <table id="tblState" class="table table-sm table-striped w-100">
+      <thead><tr>
+        <th>Par</th>
+        <th>Estado</th>
+        <th>Cantidad</th>
+        <th>Entrada</th>
+        <th>Unrealizado</th>
+      </tr></thead>
+    </table>
 </div>
 
   <h3 class="mt-4">Historial de operaciones
@@ -67,16 +68,6 @@ function loadTables(){
     ]);
     $('#tblState').DataTable({data:rows, destroy:true,
                               searching:false, paging:false});
-  });
-  // Estado
-  fetch('/api/state').then(r=>r.json()).then(data=>{
-    const rows = Object.entries(data).map(([p,s])=>[
-      p, s.position ? 'Abierta' : '—',
-      s.amount.toFixed(6),
-      s.entry.toFixed(2),
-      s.unreal.toFixed(2)
-    ]);
-    $('#tblState').DataTable({data:rows, destroy:true, searching:false, paging:false});
   });
 
 
