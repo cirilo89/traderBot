@@ -45,6 +45,16 @@
 </div>
 
 <script>
+function updateTable(sel, rows, opts={}){
+  if ($.fn.dataTable.isDataTable(sel)) {
+    const t = $(sel).DataTable();
+    t.clear();
+    t.rows.add(rows);
+    t.draw();
+  } else {
+    $(sel).DataTable(Object.assign({data:rows}, opts));
+  }
+}
 function loadTables(){
 
       // ---- Balance EUR + beneficio ----
@@ -66,8 +76,7 @@ function loadTables(){
       s.entry.toFixed(2),
       s.unreal.toFixed(2)
     ]);
-    $('#tblState').DataTable({data:rows, destroy:true,
-                              searching:false, paging:false});
+    updateTable('#tblState', rows, {searching:false, paging:false});
   });
 
 
@@ -76,21 +85,25 @@ fetch('/api/history').then(r=>r.json()).then(data=>{
   const rows = data.map(x=>[
     x.datetime,
     x.pair,
-    x.side,                   // ahora usamos la propiedad 'side' (buy/sell)
-    (+x.price).toFixed(2)     // y 'price' en lugar de 'Close'
+    x.side,
+    (+x.price).toFixed(2)
   ]);
-
-  $('#tblHist').DataTable({data:rows, destroy:true, pageLength:10});
+  updateTable('#tblHist', rows, {pageLength:10});
 });
 
 
   // Logs
   fetch('/api/logs').then(r=>r.json()).then(data=>{
     const rows = data.map(x=>[
-      x.datetime, x.pair,
-      (+x.Close).toFixed(2), x.RSI, x.SMA, x.decision, x.motivo
+      x.datetime,
+      x.pair,
+      (+x.Close).toFixed(2),
+      x.RSI,
+      x.SMA,
+      x.decision,
+      x.motivo
     ]);
-    $('#tblLogs').DataTable({data:rows, destroy:true, pageLength:25});
+    updateTable('#tblLogs', rows, {pageLength:25});
   });
 }
 loadTables();
