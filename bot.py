@@ -23,11 +23,33 @@ RSI_LOW       = float(os.getenv("RSI_LOW", 30))
 RSI_HIGH      = float(os.getenv("RSI_HIGH", 70))
 TAKE_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", 0.02))
 STOP_LOSS_PCT = 0.02  # 2%
+# Tamaño máximo de logs.db en MB (0 desactiva el control)
+LOG_DB_MAX_MB = float(os.getenv("LOG_DB_MAX_MB", 0))
 
 
 
 # ────────────── DB HELPERS ──────────────
 LOG_DB = "logs.db"
+
+def _enforce_log_size(conn):
+    """Reduce la tabla si logs.db supera LOG_DB_MAX_MB"""
+    if not LOG_DB_MAX_MB:
+        return
+    try:
+        max_bytes = LOG_DB_MAX_MB * 1024 * 1024
+        if os.path.getsize(LOG_DB) <= max_bytes:
+            return
+        # Borra registros antiguos en bloques hasta reducir el tamaño
+        while os.path.getsize(LOG_DB) > max_bytes:
+            conn.execute(
+                "DELETE FROM log_evaluaciones WHERE rowid IN "
+                "(SELECT rowid FROM log_evaluaciones ORDER BY rowid ASC LIMIT 500)"
+            )
+            conn.commit()
+        conn.execute("VACUUM")
+        conn.commit()
+    except Exception:
+        pass
 
 def ensure_db():
     conn = sqlite3.connect(LOG_DB)
@@ -46,6 +68,7 @@ def insert_log(dt, pair, close, rsi, sma, decision, motivo):
         (dt, pair, close, rsi, sma, decision, motivo)
     )
     conn.commit()
+    _enforce_log_size(conn)
     conn.close()
 
 # Aseguramos base de datos de logs
