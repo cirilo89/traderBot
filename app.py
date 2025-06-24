@@ -28,10 +28,12 @@ class User(UserMixin):
 @app.route("/api/balance")
 @login_required
 def api_balance():
-    # accedemos a capital_free y benefit_total que mantiene bot.py
+    bal = bot.binance.fetch_balance()["free"]
+    free = float(bal.get(bot.BASE_CURRENCY, 0))
+    benefit = bot.calculate_total_profit()
     return jsonify({
-        "free": bot.capital_free,
-        "benefit": bot.benefit_total
+        "free": free,
+        "benefit": benefit
     })
 
 

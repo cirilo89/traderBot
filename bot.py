@@ -91,11 +91,38 @@ def get_balance():
     return total, free
 
 capital_total, capital_free = get_balance()
-benefit_total = 0.0
 
 # ───────────────────── STATE POR PAR ────────────────────── #
 state = { t: dict(position=False, amount=0.0, entry=0.0, locked=0.0, unreal=0.0)
           for t in TICKERS }
+
+# ───────────────── CÁLCULO DE BENEFICIO REAL ─────────────── #
+def calculate_total_profit():
+    """Devuelve el beneficio realizado sumando las operaciones cerradas."""
+    profit = 0.0
+    for pair in TICKERS:
+        try:
+            trades = binance.fetch_my_trades(pair)
+        except Exception:
+            continue
+        trades.sort(key=lambda t: t['timestamp'])
+        pos_amt = 0.0
+        pos_cost = 0.0
+        for tr in trades:
+            qty = float(tr['amount'])
+            price = float(tr['price'])
+            if tr['side'] == 'buy':
+                pos_amt += qty
+                pos_cost += qty * price
+            else:  # venta
+                if pos_amt <= 0:
+                    continue
+                avg_cost = pos_cost / pos_amt
+                sold = min(qty, pos_amt)
+                profit += price * sold - avg_cost * sold
+                pos_amt -= sold
+                pos_cost -= avg_cost * sold
+    return profit
 
 # ───────────────────── INDICADORES ─────────────────────── #
 def fetch_df(pair):
@@ -138,7 +165,7 @@ def friendly_eval(rsi, sma, price, pos_open, entry=0.0):
 
 # ─────────────────── EJECUCIÓN DE TRADE ─────────────────── #
 def execute(pair, decision, price, rsi, sma, motivo):
-    global capital_free, benefit_total
+    global capital_free
     st = state[pair]
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # --- comprar ---
@@ -170,9 +197,7 @@ def execute(pair, decision, price, rsi, sma, motivo):
                 proceeds = float(order.get("cost", 0))
             else:
                 proceeds = st["amount"] * price
-            profit = proceeds - st.get("locked", 0)
             capital_free += proceeds
-            benefit_total += profit
             st.update(position=False, amount=0.0, entry=0.0, locked=0.0, unreal=0.0)
         except Exception as e:
             print("Sell error", pair, e)
