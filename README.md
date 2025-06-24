@@ -23,6 +23,8 @@ Pequeño bot de trading con interfaz web basada en Flask. Registra las evaluacio
    FLASK_SECRET=una-clave-secreta
    WEB_USER=admin
    WEB_PASS_HASH=<hash bcrypt de la contraseña>
+   # Tamaño máximo de logs.db en MB (opcional)
+   LOG_DB_MAX_MB=5
    ```
    - `TRADE_FRACTION` indica la fracción del capital libre que se usará en cada operación.
    - `RSI_LOW` y `RSI_HIGH` permiten ajustar los umbrales de sobreventa y sobrecompra.
