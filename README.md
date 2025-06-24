@@ -42,3 +42,7 @@ python app.py
 Accede a `http://localhost:8000` e inicia sesión con las credenciales configuradas.
 
 Para producción se recomienda usar el `Dockerfile` incluido o un servidor WSGI como Gunicorn.
+
+La ruta `/api/balance` calcula el beneficio total a partir del historial de operaciones
+obtenido de Binance. Así, el valor reflejado en el panel se mantiene actualizado
+incluso tras reiniciar la aplicación.
