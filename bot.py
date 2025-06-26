@@ -124,6 +124,37 @@ def calculate_total_profit():
                 pos_cost -= avg_cost * sold
     return profit
 
+# Nueva función para obtener beneficio por fecha
+def calculate_profit_series():
+    """Devuelve una lista de objetos {date, profit} agregados por día."""
+    from collections import defaultdict
+    series = defaultdict(float)
+    for pair in TICKERS:
+        try:
+            trades = binance.fetch_my_trades(pair)
+        except Exception:
+            continue
+        trades.sort(key=lambda t: t['timestamp'])
+        pos_amt = 0.0
+        pos_cost = 0.0
+        for tr in trades:
+            qty = float(tr['amount'])
+            price = float(tr['price'])
+            if tr['side'] == 'buy':
+                pos_amt += qty
+                pos_cost += qty * price
+            else:  # venta
+                if pos_amt <= 0:
+                    continue
+                avg_cost = pos_cost / pos_amt
+                sold = min(qty, pos_amt)
+                profit = price * sold - avg_cost * sold
+                day = datetime.fromtimestamp(tr['timestamp']/1000).strftime('%Y-%m-%d')
+                series[day] += profit
+                pos_amt -= sold
+                pos_cost -= avg_cost * sold
+    return [{"date": d, "profit": series[d]} for d in sorted(series)]
+
 # ───────────────────── INDICADORES ─────────────────────── #
 def fetch_df(pair):
     ohlcv = binance.fetch_ohlcv(pair, timeframe=INTERVAL, limit=150)

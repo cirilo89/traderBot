@@ -36,6 +36,12 @@ def api_balance():
         "benefit": benefit
     })
 
+@app.route("/api/profit_series")
+@login_required
+def api_profit_series():
+    """Devuelve beneficio diario para la gráfica del dashboard."""
+    return jsonify(bot.calculate_profit_series())
+
 
 @login_manager.user_loader
 def load_user(user_id):

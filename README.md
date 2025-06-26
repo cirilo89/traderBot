@@ -41,6 +41,9 @@ python app.py
 ```
 Accede a `http://localhost:8000` e inicia sesión con las credenciales configuradas.
 
+El panel ahora incluye una gráfica con el beneficio diario que se alimenta de
+la ruta `/api/profit_series`.
+
 Para producción se recomienda usar el `Dockerfile` incluido o un servidor WSGI como Gunicorn.
 
 La ruta `/api/balance` calcula el beneficio total a partir del historial de operaciones
