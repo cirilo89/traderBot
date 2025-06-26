@@ -153,14 +153,14 @@ def friendly_eval(rsi, sma, price, pos_open, entry=0.0):
         return "hold", mot
     stop_loss = entry > 0 and price <= entry * (1 - STOP_LOSS_PCT)
     take_profit = entry > 0 and price >= entry * (1 + TAKE_PROFIT_PCT)
-    exit_cond = rsi_gt or p_lt_sma or stop_loss or take_profit
+    exit_cond = stop_loss or take_profit
     if exit_cond:
-        mot = ((f"{ok(rsi_gt)} RSI {f2(rsi)}>{RSI_HIGH} o " if rsi_gt else "") +
-               (f"{ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} o " if p_lt_sma else "") +
-               (f"{ok(stop_loss)} Stop Loss ({f2(price)} ≤ {f2(entry*(1-STOP_LOSS_PCT))}) o " if stop_loss else "") +
-               (f"{ok(take_profit)} Take Profit ({f2(price)} ≥ {f2(entry*(1+TAKE_PROFIT_PCT))}) → Cerrar" if take_profit else ""))
+        mot = ((f"{ok(stop_loss)} Stop Loss ({f2(price)} ≤ {f2(entry*(1-STOP_LOSS_PCT))})" if stop_loss else "") +
+               (" o " if stop_loss and take_profit else "") +
+               (f"{ok(take_profit)} Take Profit ({f2(price)} ≥ {f2(entry*(1+TAKE_PROFIT_PCT))})" if take_profit else "") +
+               " → Cerrar")
         return "sell", mot
-    mot = (f"{ok(rsi_gt)} RSI {f2(rsi)}>{RSI_HIGH} y {ok(p_lt_sma)} Precio {f2(price)}<SMA {f2(sma)} → Mantener")
+    mot = (f"{ok(not exit_cond)} Esperando beneficio o stop loss → Mantener")
     return "hold", mot
 
 # ─────────────────── EJECUCIÓN DE TRADE ─────────────────── #
