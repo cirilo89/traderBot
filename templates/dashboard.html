@@ -38,6 +38,9 @@
       </tr></thead>
     </table>
   </div>
+  <h3 class="mt-4">Beneficio diario</h3>
+  <canvas id="profitChart" class="w-100" height="120"></canvas>
+
 </div>
 
 <script>
@@ -101,6 +104,24 @@ fetch('/api/history').then(r=>r.json()).then(data=>{
       x.motivo
     ]);
     updateTable('#tblLogs', rows, {pageLength:25});
+  });
+
+  // ---- Beneficio diario ----
+  fetch('/api/profit_series').then(r=>r.json()).then(data=>{
+    const labels = data.map(x=>x.date);
+    const vals = data.map(x=>x.profit.toFixed(2));
+    if(window.profitChart){
+      profitChart.data.labels = labels;
+      profitChart.data.datasets[0].data = vals;
+      profitChart.update();
+    } else {
+      const ctx = document.getElementById('profitChart');
+      window.profitChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: labels, datasets: [{ label: 'Beneficio', data: vals, borderColor: 'green', fill:false, tension:0.3 }]},
+        options: { scales: { y: { beginAtZero:true }}}
+      });
+    }
   });
 }
   loadTables();
