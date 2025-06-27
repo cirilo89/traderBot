@@ -44,6 +44,7 @@
 </div>
 
 <script>
+let profitChartInstance = null;
 function updateTable(sel, rows, opts={}){
   if ($.fn.dataTable.isDataTable(sel)) {
     const t = $(sel).DataTable();
@@ -110,13 +111,13 @@ fetch('/api/history').then(r=>r.json()).then(data=>{
   fetch('/api/profit_series').then(r=>r.json()).then(data=>{
     const labels = data.map(x=>x.date);
     const vals = data.map(x=>x.profit.toFixed(2));
-    if(window.profitChart){
-      profitChart.data.labels = labels;
-      profitChart.data.datasets[0].data = vals;
-      profitChart.update();
+    if(profitChartInstance){
+      profitChartInstance.data.labels = labels;
+      profitChartInstance.data.datasets[0].data = vals;
+      profitChartInstance.update();
     } else {
       const ctx = document.getElementById('profitChart');
-      window.profitChart = new Chart(ctx, {
+      profitChartInstance = new Chart(ctx, {
         type: 'line',
         data: { labels: labels, datasets: [{ label: 'Beneficio', data: vals, borderColor: 'green', fill:false, tension:0.3 }]},
         options: { scales: { y: { beginAtZero:true }}}
