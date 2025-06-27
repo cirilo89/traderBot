@@ -124,7 +124,10 @@ fetch('/api/history').then(r=>r.json()).then(data=>{
     }
   });
 }
+
+window.addEventListener('load', () => {
   loadTables();
-setInterval(loadTables, 60000); // refresca cada minuto
+  setInterval(loadTables, 60000); // refresca cada minuto
+});
 </script>
 {% endblock %}
