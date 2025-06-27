@@ -129,12 +129,19 @@ def calculate_profit_series():
     """Devuelve una lista de objetos {date, profit} agregados por día."""
     from collections import defaultdict
     series = defaultdict(float)
+    first_day = None
+    last_day = None
     for pair in TICKERS:
         try:
             trades = binance.fetch_my_trades(pair)
         except Exception:
             continue
         trades.sort(key=lambda t: t['timestamp'])
+        if trades:
+            d0 = datetime.fromtimestamp(trades[0]['timestamp']/1000).date()
+            d1 = datetime.fromtimestamp(trades[-1]['timestamp']/1000).date()
+            first_day = d0 if first_day is None else min(first_day, d0)
+            last_day = d1 if last_day is None else max(last_day, d1)
         pos_amt = 0.0
         pos_cost = 0.0
         for tr in trades:
@@ -153,7 +160,56 @@ def calculate_profit_series():
                 series[day] += profit
                 pos_amt -= sold
                 pos_cost -= avg_cost * sold
-    return [{"date": d, "profit": series[d]} for d in sorted(series)]
+
+    if first_day is None or last_day is None:
+        return []
+
+    result = []
+    for d in pd.date_range(start=first_day, end=last_day):
+        ds = d.strftime('%Y-%m-%d')
+        result.append({"date": ds, "profit": series.get(ds, 0.0)})
+
+    # Añadir PnL no realizado del día actual para mostrar pérdidas abiertas
+    open_profit = 0.0
+    for pair in TICKERS:
+        try:
+            trades = binance.fetch_my_trades(pair)
+        except Exception:
+            continue
+        trades.sort(key=lambda t: t['timestamp'])
+        pos_amt = 0.0
+        pos_cost = 0.0
+        for tr in trades:
+            qty = float(tr['amount'])
+            price = float(tr['price'])
+            if tr['side'] == 'buy':
+                pos_amt += qty
+                pos_cost += qty * price
+            else:
+                if pos_amt <= 0:
+                    continue
+                avg_cost = pos_cost / pos_amt
+                sold = min(qty, pos_amt)
+                pos_amt -= sold
+                pos_cost -= avg_cost * sold
+        if pos_amt > 0:
+            try:
+                last_price = binance.fetch_ticker(pair)['last']
+            except Exception:
+                last_price = 0.0
+            open_profit += last_price * pos_amt - pos_cost
+
+    if open_profit != 0:
+        today = datetime.now().strftime('%Y-%m-%d')
+        # Si ya existe una entrada para hoy, la sumamos
+        for entry in result:
+            if entry['date'] == today:
+                entry['profit'] += open_profit
+                break
+        else:
+            result.append({"date": today, "profit": open_profit})
+
+    return result
 
 # ───────────────────── INDICADORES ─────────────────────── #
 def fetch_df(pair):
